@@ -1,5 +1,19 @@
 ### Tiny Youtube Downloader
-Terminal based youtube video downloader, written in under 30 lines!
+Command-line based youtube video downloader.
+
+## Setup
 ```
-python3 download.py https://youtu.be/dQw4w9WgXcQ
+git clone https://github.com/grantcary/TinyYTDL.git
+cd TinyYTDL
+pip3 install -r requirements.txt
 ```
+
+## Command-line usage
+```
+usage: python3 download.py [--url] [--out]
+
+options:
+    --url (req)  # any valid youtube url
+    --out        # any valid folder path
+```
+Note: This program merges video and audio streams together using ffmpeg-python concat function. Concat has a very slow execution rates, expect slow merge times.

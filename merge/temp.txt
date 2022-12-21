@@ -1,1 +1,0 @@
-this folder temporarily stores the video and audio webm files until ffmpeg finishes concatenating

@@ -1,30 +1,57 @@
+from tempfile import TemporaryDirectory
 from os.path import expanduser
 from pytube import YouTube
+import argparse
 import ffmpeg
-import sys
-import os
 
-def path_reformat(path): return path.replace('\\', '/')
-home = f'{path_reformat(expanduser("~"))}/Desktop'
 
-def illegal_chars(title):
+def path_reformat(path: str) -> str:
+  return path.replace('\\', '/')
+
+def illegal_chars(title: str) -> str:
   for c in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']:
     title = title.replace(c, '-')
   return title
 
-def download(url, path):
+def download(url: str, path: str, tmp_file: str) -> str:
   yt = YouTube(url)
-  print(yt.title, "\n\nDownloading...")
+  print(f'downloading {yt.title}')
+  
+  # reformat for illegal characters
   title, path = illegal_chars(yt.title), path_reformat(path)
-  vidtag = yt.streams.order_by('resolution').desc()[0].itag
-  audtag = yt.streams.filter(progressive=False, file_extension='webm')[-1].itag
-  yt.streams.get_by_itag(vidtag).download(output_path='merge/', filename='vidsync.webm')
-  yt.streams.get_by_itag(audtag).download(output_path='merge/', filename='audsync.webm')
-  print('Downloaded\n')
-  vidpath, audpath = 'merge/vidsync.webm', 'merge/audsync.webm'
-  ffmpeg.concat(ffmpeg.input(vidpath), ffmpeg.input(audpath), v=1, a=1).output(f'{path}/{title}.mp4').run()
-  for p in [vidpath, audpath]: os.remove(p)
+  
+  # get highest possible resolution video and audio file tags
+  video_tag = yt.streams.order_by('resolution').desc()[0].itag
+  audio_tag = yt.streams.filter(progressive=False, file_extension='webm')[-1].itag
+  
+  # download seperate video and audio files
+  yt.streams.get_by_itag(video_tag).download(output_path=tmp_file, filename='videosync.webm')
+  yt.streams.get_by_itag(audio_tag).download(output_path=tmp_file, filename='audiosync.webm')
 
+  # setup file paths
+  tmp_video, tmp_audio, out_path = f'{tmp_file}/videosync.webm', f'{tmp_file}/audiosync.webm', f'{path}/{title}.mp4'
+  
+  # concatenate video and audio files and save to output path
+  print('merging video and audio...')
+  ffmpeg.concat(ffmpeg.input(tmp_video), ffmpeg.input(tmp_audio), v=1, a=1).output(out_path, preset='veryfast', loglevel='fatal').run()
+  
+  return out_path
 
 if __name__ == "__main__":
-  download(sys.argv[1], home) if sys.argv[1] else print("Invalid argument")
+  home = f'{path_reformat(expanduser("~"))}/Desktop'
+  
+  parser = argparse.ArgumentParser(description='Run Audio2Text', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser.add_argument('--url', required=True, type=str, help="YouTube URL")
+  parser.add_argument('--out', type=str, default=home, help="Output destination")
+  args = parser.parse_args()
+
+  # create temporary directory
+  tmp_dir = TemporaryDirectory()
+  tmp = tmp_dir.name
+
+  out = download(args.url, args.out, tmp)
+
+  # close temporary directory
+  tmp_dir.cleanup()
+
+  print(f"saved to absolute path: {out}")
