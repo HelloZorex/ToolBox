@@ -22,8 +22,8 @@ def download(url: str, path: str, tmp_file: str) -> str:
   
   # get highest possible resolution video and audio file tags
   video_tag = yt.streams.order_by('resolution').desc()[0].itag
-  audio_tag = yt.streams.filter(progressive=False, file_extension='webm')[-1].itag
-  
+  audio_tag = yt.streams.filter(progressive=False, type='audio')[-1].itag
+
   # download seperate video and audio files
   yt.streams.get_by_itag(video_tag).download(output_path=tmp_file, filename='videosync.webm')
   yt.streams.get_by_itag(audio_tag).download(output_path=tmp_file, filename='audiosync.webm')
